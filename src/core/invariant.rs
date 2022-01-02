@@ -43,9 +43,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::{
-        NaiveDateTime,
-        NaiveDate, TimeZone};
+    use chrono::{NaiveDateTime, TimeZone};
     use chrono_tz::EST;
 
     #[test]
