@@ -9,9 +9,13 @@ use super::invariant::Invariant;
  */
 
 pub trait Functor<A>: Invariant<A> {
-    fn map<'a, B>(self, f: impl FnOnce(A) -> B) -> Self::Mapped<'a, B>;
+    fn map<'a, B>(self, f: impl FnOnce(A) -> B + 'a) -> Self::Mapped<'a, B>;
 
-    fn imap<'a, B>(self, f: impl FnOnce(A) -> B, _: impl FnOnce(B) -> A) -> Self::Mapped<'a, B>
+    fn imap<'a, B>(
+        self,
+        f: impl FnOnce(A) -> B + 'a,
+        _: impl FnOnce(B) -> A + 'a,
+    ) -> Self::Mapped<'a, B>
     where
         Self: Sized,
     {

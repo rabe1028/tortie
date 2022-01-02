@@ -1,6 +1,6 @@
-use crate::kernel::semigroup::*;
+use crate::kernel::{higher_kind::HigherKind};
 
-pub trait Invariant<A> {
+pub trait Invariant<A>: HigherKind {
     type Mapped<'a, B>
     where
         Self: 'a;
@@ -16,39 +16,22 @@ pub trait Invariant<A> {
         Self: 'a;
 }
 
-impl<A, S> Invariant<A> for S
-where
-    A: Clone,
-    S: SemigroupOps<A>,
-{
-    type Mapped<'a, B>
-    where
-        Self: 'a,
-    = SemigroupInstance<'a, B, Normal>;
-    fn imap<'a, B: Clone>(
-        self,
-        f: impl Fn(A) -> B + 'a,
-        g: impl Fn(B) -> A + 'a,
-    ) -> Self::Mapped<'a, B>
-    where
-        Self: 'a,
-    {
-        let sg = self;
-        let cmb: Box<dyn Fn(B, B) -> B + 'a> = Box::new(move |x, y| f(sg.combine(g(x), g(y))));
-
-        semigroup::from_boxfn(cmb)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::kernel::semigroup::*;
     use chrono::{NaiveDateTime, TimeZone};
-    use chrono_tz::EST;
+    use chrono_tz::*;
+
+    #[test]
+    fn option_test() {
+        let s = Some(1u32);
+        assert_eq!(s.imap(|x| x as u64, |_| unimplemented!()), Some(1u64));
+    }
 
     #[test]
     fn imap_example() {
-        // example from https://github.com/typelevel/cats/blob/main/core/src/main/scala/cats/Invariant.scala
+        // example from https://typelevel.org/cats/typeclasses/invariant.html
 
         fn i64_to_datetime(secs: i64) -> NaiveDateTime {
             // from unixtimestamp[ms] to datetime

@@ -181,55 +181,6 @@ impl<'a, A: Clone> SemigroupOps<A, Reversed> for SemigroupInstance<'a, A, Revers
     }
 }
 
-macro_rules! impl_semigroup_to_num {
-    ( $($t:ty), *)  => {
-        $(
-            impl SemigroupOps<$t> for SemigroupType<$t> {
-                type Reversed = SemigroupType<$t, Reversed>;
-                fn combine(&self, x: $t, y: $t) -> $t {
-                    x + y
-                }
-
-                fn reverse(self) -> Self::Reversed {
-                    <Self::Reversed as Default>::default()
-                }
-            }
-        )*
-    };
-}
-
-impl_semigroup_to_num! { u8, u16, u32, u64, u128, usize }
-impl_semigroup_to_num! { i8, i16, i32, i64, i128, isize }
-
-impl SemigroupOps<String> for SemigroupType<String> {
-    type Reversed = SemigroupType<String, Reversed>;
-    fn combine(&self, x: String, y: String) -> String {
-        x + &y
-    }
-
-    fn reverse(self) -> Self::Reversed {
-        Self::Reversed::default()
-    }
-}
-
-impl<A: Clone> SemigroupOps<Option<A>> for SemigroupType<Option<A>>
-where
-    SemigroupType<A>: SemigroupOps<A>,
-{
-    type Reversed = SemigroupType<Option<A>, Reversed>;
-    fn combine(&self, x: Option<A>, y: Option<A>) -> Option<A> {
-        match (x, y) {
-            (None, v) => v,
-            (Some(a), None) => Some(a),
-            (Some(a), Some(b)) => Some(semigroup::combine(a, b)),
-        }
-    }
-
-    fn reverse(self) -> Self::Reversed {
-        Self::Reversed::default()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
