@@ -1,18 +1,24 @@
 use crate::core::invariant::*;
 
-impl<A: Clone, E> Invariant<A> for Result<A, E> {
-    type Mapped<'a, B>
-    where
-        Self: 'a,
-    = Result<B, E>;
-    fn imap<'a, B: Clone>(
+// impl<E> Invariant for ResultHigherKind<E> {
+//     fn imap<A, B>(
+//         fa: Self::F<A>,
+//         f: impl Fn(A) -> B,
+//         _g: impl Fn(B) -> A,
+//     ) -> Self::F<B> {
+//         fa.map(f)
+//     }
+// }
+
+impl<A, E> Invariant<'_> for Result<A, E> {
+    type Domain = A;
+    type InvariantF<B> = Result<B, E>;
+
+    fn imap<B>(
         self,
-        f: impl Fn(A) -> B + 'a,
-        _g: impl Fn(B) -> A + 'a,
-    ) -> Self::Mapped<'a, B>
-    where
-        Self: 'a,
-    {
+        f: impl Fn(Self::Domain) -> B,
+        _: impl Fn(B) -> Self::Domain,
+    ) -> Self::InvariantF<B> {
         self.map(f)
     }
 }

@@ -4,6 +4,7 @@
 #![feature(const_trait_impl)]
 #![feature(associated_type_defaults)]
 #![feature(unboxed_closures)]
+#![feature(explicit_generic_args_with_impl_trait)]
 
 pub mod core;
 pub mod kernel;

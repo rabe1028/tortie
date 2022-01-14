@@ -1,43 +1,61 @@
 use std::marker::PhantomData;
 
-use super::higher_kind::HigherKind;
 
-/// A semigroup is any set `A` with an associative operation (`combine`).
-pub type Semigroup<A> = SemigroupType<A>;
 
-pub mod semigroup {
-    use super::*;
+pub trait Combinable {
+    type Domain;
+    fn combine(&self, x: Self::Domain, y: Self::Domain) -> Self::Domain;
+}
 
-    #[inline]
-    pub fn combine<A: Clone>(x: A, y: A) -> A
-    where
-        SemigroupType<A>: SemigroupOps<A>,
-    {
-        let f: SemigroupType<A> = SemigroupType::<A>::default();
-        f.combine(x, y)
-    }
+pub trait SemigroupState {
+    type Reverse: SemigroupState;
+}
+pub enum Normal {}
+impl SemigroupState for Normal {
+    type Reverse = Reversed;
+}
+pub enum Reversed {}
+impl SemigroupState for Reversed {
+    type Reverse = Normal;
+}
 
-    #[inline]
-    pub fn combine_n<A: Clone>(a: A, n: usize) -> A
-    where
-        SemigroupType<A>: SemigroupOps<A>,
-    {
-        let f: SemigroupType<A> = SemigroupType::<A>::default();
-        f.combine_n(a, n)
-    }
+pub struct Semigroup<Ops, A, State>
+where
+    Ops: Combinable<Domain = A>,
+    State: SemigroupState,
+{
+    pub ops: Ops,
+    _dom: PhantomData<A>,
+    _state: PhantomData<State>,
+}
 
-    pub fn from_boxfn<'a, A: Clone>(f: Box<dyn Fn(A, A) -> A + 'a>) -> SemigroupInstance<'a, A> {
-        SemigroupInstance::from_boxfn(f)
+impl<Ops, A> Semigroup<Ops, A, Normal>
+where
+    Ops: Combinable<Domain = A>,
+{
+    pub fn new(ops: Ops) -> Self {
+        Self {
+            ops,
+            _dom: PhantomData,
+            _state: PhantomData,
+        }
     }
 }
 
-pub trait SemigroupOps<A: Clone, State: SemigroupState = Normal>: HigherKind {
-    type Reversed: SemigroupOps<A, State::Reverse>;
-
-    fn combine(&self, x: A, y: A) -> A;
+impl<Ops, A, State> Semigroup<Ops, A, State>
+where
+    Ops: Combinable<Domain = A>,
+    State: SemigroupState,
+{
+    pub fn combine(&self, x: A, y: A) -> A {
+        self.ops.combine(x, y)
+    }
 
     /// Return `a` combined with itself `n` times.
-    fn combine_n(&self, a: A, n: usize) -> A {
+    pub fn combine_n(&self, a: A, n: usize) -> A
+    where
+        A: Clone,
+    {
         if n == 0 {
             panic!("Repeated combining for semigroups must have n > 0")
         } else if n == 1 {
@@ -66,150 +84,173 @@ pub trait SemigroupOps<A: Clone, State: SemigroupState = Normal>: HigherKind {
 
     /// return a semigroup that reverses the order
     /// so combine(a, b) == reverse.combine(b, a)
-    fn reverse(self) -> Self::Reversed;
+    pub fn reverse(self) -> Semigroup<Ops, A, State::Reverse> {
+        Semigroup {
+            ops: self.ops,
+            _dom: PhantomData,
+            _state: PhantomData,
+        }
+    }
 }
 
-pub trait SemigroupState {
-    type Reverse: SemigroupState;
-}
-pub enum Normal {}
-impl SemigroupState for Normal {
-    type Reverse = Reversed;
-}
-pub enum Reversed {}
-impl SemigroupState for Reversed {
-    type Reverse = Normal;
-}
-
-pub struct SemigroupType<A, State = Normal>
+pub struct CombineFn<F, A>
 where
-    State: SemigroupState,
+    F: Fn(A, A) -> A,
 {
-    _phantom: PhantomData<A>,
-    _state: PhantomData<State>,
+    pub f: F,
+    _dom: PhantomData<A>,
 }
 
-impl<A, State> Default for SemigroupType<A, State>
+impl<F, A> CombineFn<F, A>
 where
-    State: SemigroupState,
+    F: Fn(A, A) -> A,
+{
+    pub fn new(f: F) -> Self {
+        Self {
+            f,
+            _dom: PhantomData,
+        }
+    }
+}
+
+impl<F, A> Combinable for CombineFn<F, A>
+where
+    F: Fn(A, A) -> A,
+{
+    type Domain = A;
+    fn combine(&self, x: Self::Domain, y: Self::Domain) -> Self::Domain {
+        (self.f)(x, y)
+    }
+}
+
+pub struct StaticCombine<A> {
+    _dom: PhantomData<A>,
+}
+
+impl<A> Default for StaticCombine<A>
+where
+    Self: Combinable<Domain = A>,
 {
     fn default() -> Self {
+        Self { _dom: PhantomData }
+    }
+}
+
+pub struct ConvertedOps<A, B, Ops, F, G>
+where
+    Ops: Combinable<Domain = A>,
+    F: Fn(A) -> B,
+    G: Fn(B) -> A,
+{
+    base: Ops,
+    base2mapped: F,
+    mapped2base: G,
+    _base_dom: PhantomData<A>,
+    _mapped_dom: PhantomData<B>,
+}
+
+impl<A, B, Ops, F, G> ConvertedOps<A, B, Ops, F, G>
+where
+    Ops: Combinable<Domain = A>,
+    F: Fn(A) -> B,
+    G: Fn(B) -> A,
+{
+    pub fn new(base: Ops, base2mapped: F, mapped2base: G) -> Self {
         Self {
-            _phantom: PhantomData,
-            _state: PhantomData,
+            base,
+            base2mapped,
+            mapped2base,
+            _base_dom: PhantomData,
+            _mapped_dom: PhantomData,
         }
     }
 }
 
-impl<A, State> HigherKind for SemigroupType<A, State>
+impl<A, B, Ops, F, G> Combinable for ConvertedOps<A, B, Ops, F, G>
 where
-    State: SemigroupState,
+    Ops: Combinable<Domain = A>,
+    F: Fn(A) -> B,
+    G: Fn(B) -> A,
 {
-    type F<B> = SemigroupType<B, State>;
-}
-
-impl<A: Clone> SemigroupOps<A, Reversed> for SemigroupType<A, Reversed>
-where
-    SemigroupType<A>: SemigroupOps<A>,
-{
-    type Reversed = SemigroupType<A, Normal>;
-
-    fn combine(&self, x: A, y: A) -> A {
-        let f = Self::Reversed::default();
-        f.combine(y, x)
-    }
-
-    fn reverse(self) -> Self::Reversed {
-        <Self::Reversed as Default>::default()
+    type Domain = B;
+    fn combine(&self, x: Self::Domain, y: Self::Domain) -> Self::Domain {
+        let (gx, gy) = ((self.mapped2base)(x), (self.mapped2base)(y));
+        let go = self.base.combine(gx, gy);
+        (self.base2mapped)(go)
     }
 }
 
-// create instant semigroup from functimn
-pub struct SemigroupInstance<'a, A, State = Normal> {
-    cmb: Box<dyn Fn(A, A) -> A + 'a>,
-    _phantom: PhantomData<A>,
-    _state: PhantomData<State>,
-}
+// impl<A> Combinable for StaticCombine<Option<A>>
+// where
+//     StaticCombine<A>: Combinable<Domain = A>
+// {
+//     type Domain = Option<A>;
+//     fn combine(&self, x: Self::Domain, y: Self::Domain) -> Self::Domain {
+//         match (x, y) {
+//             (None, v) => v,
+//             (Some(a), None) => Some(a),
+//             (Some(a), Some(b)) => {
+//                 let c = StaticCombine::<A>::default();
+//                 Some(c.combine(a, b))
+//             },
+//         }
+//     }
+// }
 
-impl<'a, A> SemigroupInstance<'a, A, Normal>
-where
-    A: Clone,
-{
-    pub fn from_boxfn(f: Box<dyn Fn(A, A) -> A + 'a>) -> SemigroupInstance<'a, A, Normal> {
-        SemigroupInstance {
-            cmb: f,
-            _phantom: PhantomData,
-            _state: PhantomData,
-        }
-    }
-}
+pub mod semigroup2 {
+    use super::*;
 
-impl<'a, A: Clone, State> HigherKind for SemigroupInstance<'a, A, State>
-where
-    State: SemigroupState,
-{
-    type F<B> = SemigroupInstance<'a, B, State>;
-}
-
-impl<'a, A: Clone> SemigroupOps<A, Normal> for SemigroupInstance<'a, A, Normal> {
-    type Reversed = SemigroupInstance<'a, A, Reversed>;
-    fn combine(&self, x: A, y: A) -> A {
-        (self.cmb)(x, y)
+    #[inline]
+    pub fn combine<A>(x: A, y: A) -> A
+    where
+        StaticCombine<A>: Combinable<Domain = A>,
+    {
+        let f = StaticCombine::<A>::default();
+        let semigroup = Semigroup::new(f);
+        semigroup.combine(x, y)
     }
 
-    fn reverse(self) -> Self::Reversed {
-        SemigroupInstance {
-            cmb: self.cmb,
-            _phantom: PhantomData,
-            _state: PhantomData,
-        }
-    }
-}
-
-impl<'a, A: Clone> SemigroupOps<A, Reversed> for SemigroupInstance<'a, A, Reversed> {
-    type Reversed = SemigroupInstance<'a, A, Normal>;
-    fn combine(&self, x: A, y: A) -> A {
-        (self.cmb)(y, x)
-    }
-
-    fn reverse(self) -> Self::Reversed {
-        SemigroupInstance {
-            cmb: self.cmb,
-            _phantom: PhantomData,
-            _state: PhantomData,
-        }
+    #[inline]
+    pub fn combine_n<A: Clone>(a: A, n: usize) -> A
+    where
+        StaticCombine<A>: Combinable<Domain = A>,
+    {
+        let f = StaticCombine::<A>::default();
+        let semigroup = Semigroup::new(f);
+        semigroup.combine_n(a, n)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::kernel::instance::option::*;
 
     #[test]
     fn combine_string() {
         // example from https://github.com/typelevel/cats/blob/main/kernel/src/main/scala/cats/kernel/Semigroup.scala
-        let answer = semigroup::combine("Hello ".to_string(), "World!".to_string());
+        let answer = semigroup2::combine("Hello ".to_string(), "World!".to_string());
         assert_eq!(answer, "Hello World!".to_string());
     }
 
     #[test]
     fn combine_option() {
         // example from https://github.com/typelevel/cats/blob/main/kernel/src/main/scala/cats/kernel/Semigroup.scala
-        let answer = semigroup::combine(None, Some(1));
+        let answer = OptionCombine::default().combine(None, Some(1));
         assert_eq!(answer, Some(1))
     }
 
     #[test]
     fn combine_n_int() {
         // example from https://github.com/typelevel/cats/blob/main/kernel/src/main/scala/cats/kernel/Semigroup.scala
-        let answer = semigroup::combine_n(1, 10);
+        let answer = semigroup2::combine_n(1, 10);
         assert_eq!(answer, 10);
     }
 
     #[test]
     fn combine_n_string() {
         // example from https://github.com/typelevel/cats/blob/main/kernel/src/main/scala/cats/kernel/Semigroup.scala
-        let answer = semigroup::combine_n("ha".to_string(), 3);
+        let answer = semigroup2::combine_n("ha".to_string(), 3);
         assert_eq!(answer, "hahaha".to_string());
     }
 
@@ -217,9 +258,12 @@ mod tests {
     fn reverse() {
         let a = 1;
         let b = 100;
+
+        let sg = Semigroup::new(StaticCombine::<i32>::default());
+
         assert_eq!(
-            semigroup::combine(a, b),
-            Semigroup::<i32>::default().reverse().combine(b, a)
+            StaticCombine::<i32>::default().combine(a, b),
+            sg.reverse().combine(b, a)
         )
     }
 }

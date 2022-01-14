@@ -1,19 +1,16 @@
-use crate::kernel::{higher_kind::HigherKind};
 
-pub trait Invariant<A>: HigherKind {
-    type Mapped<'a, B>
-    where
-        Self: 'a;
+
+pub trait Invariant<'a> {
+    type Domain;
+    type InvariantF<A>;
 
     /// Transform an `F<A>` into an `F<B>` by providing a transformation from
     /// `A` to `B` and one from `B` to `A`
-    fn imap<'a, B: Clone>(
+    fn imap<B>(
         self,
-        f: impl Fn(A) -> B + 'a,
-        g: impl Fn(B) -> A + 'a,
-    ) -> Self::Mapped<'a, B>
-    where
-        Self: 'a;
+        f: impl Fn(Self::Domain) -> B + 'a,
+        g: impl Fn(B) -> Self::Domain + 'a,
+    ) -> Self::InvariantF<B>;
 }
 
 #[cfg(test)]
@@ -26,7 +23,10 @@ mod tests {
     #[test]
     fn option_test() {
         let s = Some(1u32);
-        assert_eq!(s.imap(|x| x as u64, |_| unimplemented!()), Some(1u64));
+        assert_eq!(
+            Option::imap::<u64>(s, |x: u32| { x as u64 }, |_: u64| unimplemented!()),
+            Some(1u64)
+        );
     }
 
     #[test]
@@ -44,11 +44,14 @@ mod tests {
             ndt.timestamp_millis()
         }
 
-        let sg: SemigroupInstance<'_, NaiveDateTime> = Invariant::imap(
-            Semigroup::<i64>::default(),
-            i64_to_datetime,
-            datetime_to_i64,
-        );
+        // let sg: SemigroupInstance<'_, NaiveDateTime> = Semigroup::imap::<NaiveDateTime>(
+        //     Semigrouped::<i64>::default().into_instance(),
+        //     i64_to_datetime,
+        //     datetime_to_i64,
+        // );
+
+        let sg = Semigroup::new(StaticCombine::<i64>::default());
+        let sg = sg.imap(i64_to_datetime, datetime_to_i64);
 
         let today_ns = 1449088684104;
         let left_ns = 1900918893;

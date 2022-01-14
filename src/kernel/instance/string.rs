@@ -1,12 +1,8 @@
 use crate::kernel::semigroup::*;
 
-impl SemigroupOps<String> for SemigroupType<String> {
-    type Reversed = SemigroupType<String, Reversed>;
-    fn combine(&self, x: String, y: String) -> String {
+impl Combinable for StaticCombine<String> {
+    type Domain = String;
+    fn combine(&self, x: Self::Domain, y: Self::Domain) -> Self::Domain {
         x + &y
-    }
-
-    fn reverse(self) -> Self::Reversed {
-        Self::Reversed::default()
     }
 }
