@@ -1,7 +1,5 @@
 use std::marker::PhantomData;
 
-
-
 pub trait Combinable {
     type Domain;
     fn combine(&self, x: Self::Domain, y: Self::Domain) -> Self::Domain;
@@ -135,67 +133,6 @@ where
         Self { _dom: PhantomData }
     }
 }
-
-pub struct ConvertedOps<A, B, Ops, F, G>
-where
-    Ops: Combinable<Domain = A>,
-    F: Fn(A) -> B,
-    G: Fn(B) -> A,
-{
-    base: Ops,
-    base2mapped: F,
-    mapped2base: G,
-    _base_dom: PhantomData<A>,
-    _mapped_dom: PhantomData<B>,
-}
-
-impl<A, B, Ops, F, G> ConvertedOps<A, B, Ops, F, G>
-where
-    Ops: Combinable<Domain = A>,
-    F: Fn(A) -> B,
-    G: Fn(B) -> A,
-{
-    pub fn new(base: Ops, base2mapped: F, mapped2base: G) -> Self {
-        Self {
-            base,
-            base2mapped,
-            mapped2base,
-            _base_dom: PhantomData,
-            _mapped_dom: PhantomData,
-        }
-    }
-}
-
-impl<A, B, Ops, F, G> Combinable for ConvertedOps<A, B, Ops, F, G>
-where
-    Ops: Combinable<Domain = A>,
-    F: Fn(A) -> B,
-    G: Fn(B) -> A,
-{
-    type Domain = B;
-    fn combine(&self, x: Self::Domain, y: Self::Domain) -> Self::Domain {
-        let (gx, gy) = ((self.mapped2base)(x), (self.mapped2base)(y));
-        let go = self.base.combine(gx, gy);
-        (self.base2mapped)(go)
-    }
-}
-
-// impl<A> Combinable for StaticCombine<Option<A>>
-// where
-//     StaticCombine<A>: Combinable<Domain = A>
-// {
-//     type Domain = Option<A>;
-//     fn combine(&self, x: Self::Domain, y: Self::Domain) -> Self::Domain {
-//         match (x, y) {
-//             (None, v) => v,
-//             (Some(a), None) => Some(a),
-//             (Some(a), Some(b)) => {
-//                 let c = StaticCombine::<A>::default();
-//                 Some(c.combine(a, b))
-//             },
-//         }
-//     }
-// }
 
 pub mod semigroup2 {
     use super::*;

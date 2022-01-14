@@ -1,5 +1,3 @@
-
-
 pub trait Invariant<'a> {
     type Domain;
     type InvariantF<A>;

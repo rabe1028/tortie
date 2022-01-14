@@ -10,7 +10,6 @@ use super::invariant::Invariant;
 
 pub trait Functor<'a>: Invariant<'a> + Sized {
     type FunctorF<A>;
-    // type Lifted<A: Clone, B: Clone>: FnOnce(Self::F<A>) -> Self::F<B>;
 
     fn map<B>(self, f: impl FnOnce(Self::Domain) -> B) -> Self::FunctorF<B>;
 
@@ -29,8 +28,26 @@ pub trait Functor<'a>: Invariant<'a> + Sized {
     fn fmap<B>(self, f: impl FnOnce(Self::Domain) -> B) -> Self::FunctorF<B> {
         <Self as Functor>::map(self, f)
     }
+}
 
-    // fn lift<A: Clone, B: Clone>(f: impl FnOnce(A) -> B) -> Self::Lifted<A, B> {
-    //     move |fa: Self::F<A>| <Self as Functor>::map(fa, f)
-    // }
+pub trait FunctorLift<'a>: Functor<'a> {
+    type Lifted<B>: FnOnce(Self) -> Self::FunctorF<B>;
+
+    fn lift<B, F>(f: F) -> Self::Lifted<B>
+    where
+        F: FnOnce(Self::Domain) -> B + 'a;
+}
+
+impl<'a, A> FunctorLift<'a> for A
+where
+    A: Functor<'a>,
+{
+    type Lifted<B> = Box<dyn FnOnce(Self) -> Self::FunctorF<B> + 'a>;
+
+    fn lift<B, F>(f: F) -> Self::Lifted<B>
+    where
+        F: FnOnce(Self::Domain) -> B + 'a,
+    {
+        Box::new(move |fa: A| fa.map(f))
+    }
 }

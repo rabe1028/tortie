@@ -1,4 +1,3 @@
-
 use crate::kernel::semigroup::*;
 use std::marker::PhantomData;
 

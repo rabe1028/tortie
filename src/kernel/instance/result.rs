@@ -26,7 +26,7 @@ where
             (Ok(a), Ok(b)) => {
                 let c = StaticCombine::<A>::default();
                 Ok(c.combine(a, b))
-            },
+            }
         }
     }
 }

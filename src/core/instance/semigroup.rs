@@ -1,4 +1,4 @@
-use crate::{core::invariant::*};
+use crate::core::invariant::*;
 use crate::kernel::semigroup::*;
 
 impl<'a, Ops, A, State> Invariant<'a> for Semigroup<Ops, A, State>
@@ -16,7 +16,6 @@ where
         f: impl Fn(Self::Domain) -> B + 'a,
         g: impl Fn(B) -> Self::Domain + 'a,
     ) -> Self::InvariantF<B> {
-
         let ops: Box<dyn Fn(B, B) -> B + '_> = Box::new(move |x, y| f(self.combine(g(x), g(y))));
         let ops = CombineFn::new(ops);
 
