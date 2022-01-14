@@ -44,12 +44,6 @@ mod tests {
             ndt.timestamp_millis()
         }
 
-        // let sg: SemigroupInstance<'_, NaiveDateTime> = Semigroup::imap::<NaiveDateTime>(
-        //     Semigrouped::<i64>::default().into_instance(),
-        //     i64_to_datetime,
-        //     datetime_to_i64,
-        // );
-
         let sg = Semigroup::new(StaticCombine::<i64>::default());
         let sg = sg.imap(i64_to_datetime, datetime_to_i64);
 
