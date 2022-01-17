@@ -51,3 +51,20 @@ where
         Box::new(move |fa: A| fa.map(f))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn option_fmap() {
+        let s = Some(1u32);
+        assert_eq!(s.fmap(|x| { x as u64 }), Some(1u64))
+    }
+
+    #[test]
+    fn option_lift() {
+        let liftf = Option::lift(|x: u32| x as u64);
+        assert_eq!(liftf(Some(1u32)), Some(1u64))
+    }
+}
