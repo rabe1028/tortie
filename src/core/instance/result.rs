@@ -1,6 +1,6 @@
 use crate::core::{
     apply::Apply, functor::Functor, invariant::*, invariant_monoidal::InvariantMonoidal,
-    semigroupal::Semigroupal,
+    semigroupal::Semigroupal, applicative::Applicative,
 };
 
 impl<A, E> Invariant<'_> for Result<A, E> {
@@ -50,5 +50,11 @@ where
 impl<'a, A, E> InvariantMonoidal<'a> for Result<A, E> {
     fn unit() -> Self::InvariantF<()> {
         Ok(())
+    }
+}
+
+impl<'a, A, E> Applicative<'a> for Result<A, E> {
+    fn pure(x: Self::Domain) -> Self {
+        Ok(x)
     }
 }
