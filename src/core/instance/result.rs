@@ -1,4 +1,7 @@
-use crate::core::{functor::Functor, invariant::*, semigroupal::Semigroupal};
+use crate::core::{
+    apply::Apply, functor::Functor, invariant::*, invariant_monoidal::InvariantMonoidal,
+    semigroupal::Semigroupal,
+};
 
 impl<A, E> Invariant<'_> for Result<A, E> {
     type Domain = A;
@@ -31,5 +34,21 @@ impl<A, E> Semigroupal for Result<A, E> {
             (Ok(_), Err(e)) => Err(e),
             (Err(e), _) => Err(e),
         }
+    }
+}
+
+impl<'a, F, A, B, E> Apply<'a, A, B> for Result<F, E>
+where
+    F: FnOnce(A) -> B,
+{
+    type ApplyF<D> = Result<D, E>;
+    fn ap(self, fa: Self::ApplyF<A>) -> Self::ApplyF<B> {
+        self.map(|f: F| fa.map(f)).flatten()
+    }
+}
+
+impl<'a, A, E> InvariantMonoidal<'a> for Result<A, E> {
+    fn unit() -> Self::InvariantF<()> {
+        Ok(())
     }
 }

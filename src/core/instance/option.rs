@@ -1,4 +1,7 @@
-use crate::core::{functor::Functor, invariant::*, semigroupal::Semigroupal};
+use crate::core::{
+    applicative::Applicative, apply::Apply, functor::Functor, invariant::*,
+    invariant_monoidal::InvariantMonoidal, semigroupal::Semigroupal,
+};
 
 impl<A> Invariant<'_> for Option<A> {
     type Domain = A;
@@ -27,5 +30,27 @@ impl<A> Semigroupal for Option<A> {
 
     fn product<B>(self, other: Self::SemigroupalF<B>) -> Self::SemigroupalF<(Self::From, B)> {
         self.zip(other)
+    }
+}
+
+impl<'a, F, A, B> Apply<'a, A, B> for Option<F>
+where
+    F: FnOnce(A) -> B,
+{
+    type ApplyF<D> = Option<D>;
+    fn ap(self, fa: Self::ApplyF<A>) -> Self::ApplyF<B> {
+        self.map(|f: F| fa.map(f)).flatten()
+    }
+}
+
+impl<'a, A> InvariantMonoidal<'a> for Option<A> {
+    fn unit() -> Self::InvariantF<()> {
+        Some(())
+    }
+}
+
+impl<'a, A> Applicative<'a> for Option<A> {
+    fn pure(x: Self::Domain) -> Self {
+        Some(x)
     }
 }
