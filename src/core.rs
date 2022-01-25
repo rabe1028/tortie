@@ -7,3 +7,7 @@ pub mod invariant;
 pub mod invariant_monoidal;
 pub mod invariant_semigroupal;
 pub mod semigroupal;
+
+pub trait Isomorphism<T>: From<T> + Into<T> {}
+
+impl<T, U> Isomorphism<T> for U where U: From<T> + Into<T> {}

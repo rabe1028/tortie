@@ -1,4 +1,4 @@
-use super::{apply::AppliedBound, functor::Functor};
+use super::{apply::AppliedBound, functor::Functor, Isomorphism};
 
 /**
  * FlatMap type class gives us flatMap, which allows us to have a value
@@ -22,15 +22,15 @@ pub trait FlatMap<'a>: AppliedBound<'a> {
     fn flatten(self) -> Self::FunctorF<Self::Domain>
     where
         Self::Domain: FlatMap<'a> + Functor<'a, FunctorF<Self::Domain> = Self::Domain>,
-        Self::FunctorF<Self::Domain>: From<Self::Domain>,
+        Self::FunctorF<Self::Domain>: Isomorphism<Self::Domain>,
     {
         self.flat_map(|fa| fa.into())
     }
 
     fn flat_tap<B>(self, f: impl FnOnce(Self::Domain) -> Self::FunctorF<B>) -> Self
     where
-        Self::FunctorF<Self::Domain>:
-            From<Self> + From<<Self::FunctorF<B> as Functor<'a>>::FunctorF<Self::Domain>>,
+        Self::FunctorF<Self::Domain>: Isomorphism<Self>
+            + Isomorphism<<Self::FunctorF<B> as Functor<'a>>::FunctorF<Self::Domain>>,
         Self::Domain: Clone,
         Self: From<Self::FunctorF<Self::Domain>>,
     {
