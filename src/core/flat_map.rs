@@ -45,6 +45,7 @@ pub trait FlatMap<'a>: AppliedBound<'a> {
      *
      * Implementations of this method should use constant stack space relative to `f`.
      */
+    const TAILREC_LIMIT: usize = 1_000_000_000;
     fn tailrec<U>(a: U, f: impl Fn(U) -> Self::FunctorF<Result<Self::Domain, U>>) -> Self;
 }
 

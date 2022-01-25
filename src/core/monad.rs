@@ -90,8 +90,9 @@ mod tests {
         assert_eq!(Some(1).iterate_while(|_| false), Some(1))
     }
 
-    // これは終わらないので実行しない
+    // これは時間かかるので実行しない
     // #[test]
+    // #[should_panic]
     // fn option_iterate_until() {
     //     assert_eq!(Some(1).iterate_until(|_| false), None)
     // }

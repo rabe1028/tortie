@@ -71,10 +71,20 @@ impl<'a, A, E> FlatMap<'a> for Result<A, E> {
     }
 
     fn tailrec<U>(a: U, f: impl Fn(U) -> Self::FunctorF<Result<Self::Domain, U>>) -> Self {
-        match f(a) {
-            Err(e) => Err(e),
-            Ok(Err(b1)) => Result::tailrec(b1, f),
-            Ok(Ok(v)) => Ok(v),
+        // this code happend stack overflow.
+        // match f(a) {
+        //     Err(e) => Err(e),
+        //     Ok(Err(b1)) => Result::tailrec(b1, f),
+        //     Ok(Ok(v)) => Ok(v),
+        // }
+        let mut a = a;
+        for _ in 0..Self::TAILREC_LIMIT {
+            match f(a) {
+                Err(e) => return Err(e),
+                Ok(Err(a1)) => a = a1,
+                Ok(Ok(v)) => return Ok(v),
+            }
         }
+        unreachable!("Tailrec limit reached!!!");
     }
 }
