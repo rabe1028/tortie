@@ -6,6 +6,7 @@
 #![feature(unboxed_closures)]
 #![feature(explicit_generic_args_with_impl_trait)]
 #![feature(result_flattening)]
+#![feature(trait_alias)]
 
 pub mod core;
 pub mod kernel;

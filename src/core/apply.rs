@@ -6,6 +6,8 @@ use super::{functor::*, invariant_semigroupal::InvariantSemigroupal};
  * Must obey the laws defined in cats.laws.ApplyLaws.
  */
 
+pub trait AppliedBound<'a> = FunctorLift<'a> + InvariantSemigroupal<'a>;
+
 pub trait Apply<'a, A, B>: FunctorLift<'a> + InvariantSemigroupal<'a> {
     type ApplyF<D>;
     fn ap(self, fa: Self::ApplyF<A>) -> Self::ApplyF<B>;

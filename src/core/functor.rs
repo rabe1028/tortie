@@ -28,6 +28,11 @@ pub trait Functor<'a>: Invariant<'a> + Sized {
     fn fmap<B>(self, f: impl FnOnce(Self::Domain) -> B) -> Self::FunctorF<B> {
         <Self as Functor>::map(self, f)
     }
+
+    /// Cats `as` method but rust cannot use `as` name
+    fn replace<B>(self, b: B) -> Self::FunctorF<B> {
+        self.map(|_| b)
+    }
 }
 
 pub trait FunctorLift<'a>: Functor<'a> {

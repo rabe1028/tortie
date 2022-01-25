@@ -1,6 +1,6 @@
 use crate::core::{
-    apply::Apply, functor::Functor, invariant::*, invariant_monoidal::InvariantMonoidal,
-    semigroupal::Semigroupal, applicative::Applicative,
+    applicative::Applicative, apply::Apply, functor::Functor, invariant::*,
+    invariant_monoidal::InvariantMonoidal, semigroupal::Semigroupal, flat_map::FlatMap,
 };
 
 impl<A, E> Invariant<'_> for Result<A, E> {
@@ -58,3 +58,12 @@ impl<'a, A, E> Applicative<'a> for Result<A, E> {
         Ok(x)
     }
 }
+
+impl<'a, A, E> FlatMap<'a> for Result<A, E> {
+    fn flat_map<B>(self, f: impl FnOnce(Self::Domain) -> Self::FunctorF<B>) -> Self::FunctorF<B> {
+        match self {
+            Ok(x) => f(x),
+            Err(e) => Err(e)
+        }
+    }
+} 

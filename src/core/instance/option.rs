@@ -1,5 +1,5 @@
 use crate::core::{
-    applicative::Applicative, apply::Apply, functor::Functor, invariant::*,
+    applicative::Applicative, apply::Apply, flat_map::FlatMap, functor::Functor, invariant::*,
     invariant_monoidal::InvariantMonoidal, semigroupal::Semigroupal,
 };
 
@@ -52,5 +52,14 @@ impl<'a, A> InvariantMonoidal<'a> for Option<A> {
 impl<'a, A> Applicative<'a> for Option<A> {
     fn pure(x: Self::Domain) -> Self {
         Some(x)
+    }
+}
+
+impl<'a, A> FlatMap<'a> for Option<A> {
+    fn flat_map<B>(self, f: impl FnOnce(Self::Domain) -> Self::FunctorF<B>) -> Self::FunctorF<B> {
+        match self {
+            Some(x) => f(x),
+            None => None,
+        }
     }
 }
