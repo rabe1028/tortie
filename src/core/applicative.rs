@@ -22,8 +22,7 @@ pub trait Applicative<'a>: FunctorLift<'a> + InvariantMonoidal<'a> {
     fn map<B, F: FnOnce(Self::Domain) -> B>(self, f: F) -> Self::FunctorF<B>
     where
         Self::FunctorF<F>: Applicative<'a>
-            + Apply<'a, Self::Domain, B, ApplyF<Self::Domain> = Self>
-            + Invariant<'a, Domain = F>,
+            + Apply<'a, Self::Domain, B, ApplyF<Self::Domain> = Self>,
         Self::FunctorF<B>: From<<Self::FunctorF<F> as Apply<'a, Self::Domain, B>>::ApplyF<B>>,
     {
         Self::FunctorF::<F>::pure(f).ap(self).into()

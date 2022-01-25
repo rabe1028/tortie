@@ -1,4 +1,4 @@
-use super::{apply::AppliedBound, functor::Functor, invariant::Invariant};
+use super::{apply::AppliedBound, functor::Functor};
 
 /**
  * FlatMap type class gives us flatMap, which allows us to have a value
@@ -19,17 +19,16 @@ use super::{apply::AppliedBound, functor::Functor, invariant::Invariant};
 pub trait FlatMap<'a>: AppliedBound<'a> {
     fn flat_map<B>(self, f: impl FnOnce(Self::Domain) -> Self::FunctorF<B>) -> Self::FunctorF<B>;
 
-    fn flatten(self) -> <Self as Functor<'a>>::FunctorF<<Self as Invariant<'a>>::Domain>
+    fn flatten(self) -> Self::FunctorF<Self::Domain>
     where
         Self::Domain: FlatMap<'a> + Functor<'a, FunctorF<Self::Domain> = Self::Domain>,
-        <Self as Functor<'a>>::FunctorF<<Self as Invariant<'a>>::Domain>: From<Self::Domain>,
+        Self::FunctorF<Self::Domain>: From<Self::Domain>,
     {
         self.flat_map(|fa| fa.into())
     }
 
     fn flat_tap<B>(self, f: impl FnOnce(Self::Domain) -> Self::FunctorF<B>) -> Self
     where
-        Self::FunctorF<B>: Functor<'a>,
         Self::FunctorF<Self::Domain>:
             From<Self> + From<<Self::FunctorF<B> as Functor<'a>>::FunctorF<Self::Domain>>,
         Self::Domain: Clone,

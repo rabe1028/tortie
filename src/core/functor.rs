@@ -9,7 +9,7 @@ use super::invariant::Invariant;
  */
 
 pub trait Functor<'a>: Invariant<'a> + Sized {
-    type FunctorF<A>: Functor<'a>;
+    type FunctorF<A>: Functor<'a> + Invariant<'a, Domain = A>;
 
     fn map<B>(self, f: impl FnOnce(Self::Domain) -> B) -> Self::FunctorF<B>;
 

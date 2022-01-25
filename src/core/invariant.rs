@@ -1,6 +1,6 @@
 pub trait Invariant<'a> {
     type Domain;
-    type InvariantF<A>: Invariant<'a>
+    type InvariantF<A>: Invariant<'a, Domain = A>
     where
         A: 'a;
 
