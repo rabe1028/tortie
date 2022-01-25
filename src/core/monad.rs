@@ -78,3 +78,21 @@ pub trait Monad<'a>: FlatMap<'a> + Applicative<'a> {
         Monad::iterate_while_m(init, f, |a| !p(a))
     }
 }
+
+impl<'a, T> Monad<'a> for T where T: FlatMap<'a> + Applicative<'a> {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn option_iterate_while() {
+        assert_eq!(Some(1).iterate_while(|_| false), Some(1))
+    }
+
+    // これは終わらないので実行しない
+    // #[test]
+    // fn option_iterate_until() {
+    //     assert_eq!(Some(1).iterate_until(|_| false), None)
+    // }
+}

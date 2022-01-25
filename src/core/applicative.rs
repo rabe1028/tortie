@@ -61,7 +61,7 @@ pub trait Applicative<'a>: FunctorLift<'a> + InvariantMonoidal<'a> {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
 
     #[test]
