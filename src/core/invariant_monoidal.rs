@@ -7,9 +7,7 @@ use super::{invariant::Invariant, invariant_semigroupal::InvariantSemigroupal};
  */
 
 pub trait InvariantMonoidal<'a>: InvariantSemigroupal<'a> {
-    fn point<A: 'a + Clone>(
-        a: A,
-    ) -> <<Self as Invariant<'a>>::InvariantF<()> as Invariant<'a>>::InvariantF<A>
+    fn point<A: 'a + Clone>(a: A) -> <Self::InvariantF<()> as Invariant<'a>>::InvariantF<A>
     where
         <Self as Invariant<'a>>::InvariantF<()>: Invariant<'a, Domain = ()>,
     {

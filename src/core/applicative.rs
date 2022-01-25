@@ -19,21 +19,14 @@ use super::{
 pub trait Applicative<'a>: FunctorLift<'a> + InvariantMonoidal<'a> {
     fn pure(x: Self::Domain) -> Self;
 
-    // TODO: GenericAssociatedTypeに複数代入できないから、戻りの型が地獄絵図
-    fn map<B, F: FnOnce(Self::Domain) -> B>(
-        self,
-        f: F,
-    ) -> <<Self as Functor<'a>>::FunctorF<F> as Apply<
-        'a,
-        <Self as Invariant<'a>>::Domain,
-        B,
-    >>::ApplyF<B>
+    fn map<B, F: FnOnce(Self::Domain) -> B>(self, f: F) -> Self::FunctorF<B>
     where
-        <Self as Functor<'a>>::FunctorF<F>: Applicative<'a>
+        Self::FunctorF<F>: Applicative<'a>
             + Apply<'a, Self::Domain, B, ApplyF<Self::Domain> = Self>
             + Invariant<'a, Domain = F>,
+        Self::FunctorF<B>: From<<Self::FunctorF<F> as Apply<'a, Self::Domain, B>>::ApplyF<B>>,
     {
-        Self::FunctorF::<F>::pure(f).ap(self)
+        Self::FunctorF::<F>::pure(f).ap(self).into()
     }
 
     fn unit() -> Self
@@ -58,7 +51,7 @@ pub trait Applicative<'a>: FunctorLift<'a> + InvariantMonoidal<'a> {
     fn when(cond: bool, fa: Self) -> Self::FunctorF<()>
     where
         Self: Applicative<'a> + Invariant<'a> + Functor<'a>,
-        <Self as Functor<'a>>::FunctorF<()>: Applicative<'a> + Invariant<'a, Domain = ()>,
+        Self::FunctorF<()>: Applicative<'a> + Invariant<'a, Domain = ()>,
     {
         if cond {
             fa.fmap(|_| ())

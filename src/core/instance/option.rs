@@ -3,11 +3,14 @@ use crate::core::{
     invariant_monoidal::InvariantMonoidal, semigroupal::Semigroupal,
 };
 
-impl<A> Invariant<'_> for Option<A> {
+impl<'a, A> Invariant<'a> for Option<A> {
     type Domain = A;
-    type InvariantF<B> = Option<B>;
+    type InvariantF<B>
+    where
+        B: 'a,
+    = Option<B>;
 
-    fn imap<B>(
+    fn imap<B: 'a>(
         self,
         f: impl Fn(Self::Domain) -> B,
         _: impl Fn(B) -> Self::Domain,

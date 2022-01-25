@@ -1,13 +1,16 @@
 use crate::core::{
-    applicative::Applicative, apply::Apply, functor::Functor, invariant::*,
-    invariant_monoidal::InvariantMonoidal, semigroupal::Semigroupal, flat_map::FlatMap,
+    applicative::Applicative, apply::Apply, flat_map::FlatMap, functor::Functor, invariant::*,
+    invariant_monoidal::InvariantMonoidal, semigroupal::Semigroupal,
 };
 
-impl<A, E> Invariant<'_> for Result<A, E> {
+impl<'a, A, E> Invariant<'a> for Result<A, E> {
     type Domain = A;
-    type InvariantF<B> = Result<B, E>;
+    type InvariantF<B>
+    where
+        B: 'a,
+    = Result<B, E>;
 
-    fn imap<B>(
+    fn imap<B: 'a>(
         self,
         f: impl Fn(Self::Domain) -> B,
         _: impl Fn(B) -> Self::Domain,
@@ -63,7 +66,7 @@ impl<'a, A, E> FlatMap<'a> for Result<A, E> {
     fn flat_map<B>(self, f: impl FnOnce(Self::Domain) -> Self::FunctorF<B>) -> Self::FunctorF<B> {
         match self {
             Ok(x) => f(x),
-            Err(e) => Err(e)
+            Err(e) => Err(e),
         }
     }
-} 
+}

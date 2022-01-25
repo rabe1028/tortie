@@ -8,10 +8,13 @@ where
     A: 'a,
 {
     type Domain = A;
-    type InvariantF<B> = Semigroup<CombineFn<Box<dyn Fn(B, B) -> B + 'a>, B>, B, Normal>;
+    type InvariantF<B>
+    where
+        B: 'a,
+    = Semigroup<CombineFn<Box<dyn Fn(B, B) -> B + 'a>, B>, B, Normal>;
     // type InvariantF<B> = Semigroup<CombineFn<impl Fn(B, B) -> B + 'a, B>, B, Normal>;
 
-    fn imap<B>(
+    fn imap<B: 'a>(
         self,
         f: impl Fn(Self::Domain) -> B + 'a,
         g: impl Fn(B) -> Self::Domain + 'a,

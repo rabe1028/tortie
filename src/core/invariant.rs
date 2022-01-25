@@ -1,10 +1,12 @@
 pub trait Invariant<'a> {
     type Domain;
-    type InvariantF<A>;
+    type InvariantF<A>: Invariant<'a>
+    where
+        A: 'a;
 
     /// Transform an `F<A>` into an `F<B>` by providing a transformation from
     /// `A` to `B` and one from `B` to `A`
-    fn imap<B>(
+    fn imap<B: 'a>(
         self,
         f: impl Fn(Self::Domain) -> B + 'a,
         g: impl Fn(B) -> Self::Domain + 'a,
