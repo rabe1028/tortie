@@ -65,4 +65,12 @@ impl<'a, A> FlatMap<'a> for Option<A> {
             None => None,
         }
     }
+
+    fn tailrec<U>(a: U, f: impl Fn(U) -> Self::FunctorF<Result<Self::Domain, U>>) -> Self {
+        match f(a) {
+            None => None,
+            Some(Err(a1)) => Option::tailrec(a1, f),
+            Some(Ok(b)) => Some(b),
+        }
+    }
 }

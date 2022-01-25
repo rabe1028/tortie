@@ -36,6 +36,16 @@ pub trait FlatMap<'a>: AppliedBound<'a> {
     {
         self.flat_map(|a| f(a.clone()).replace(a).into()).into()
     }
+
+    /**
+     * Keeps calling `f` until a `scala.util.Right[B]` is returned.
+     *
+     * Based on Phil Freeman's
+     * [[http://functorial.com/stack-safety-for-free/index.pdf Stack Safety for Free]].
+     *
+     * Implementations of this method should use constant stack space relative to `f`.
+     */
+    fn tailrec<U>(a: U, f: impl Fn(U) -> Self::FunctorF<Result<Self::Domain, U>>) -> Self;
 }
 
 #[cfg(test)]

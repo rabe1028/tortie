@@ -69,4 +69,12 @@ impl<'a, A, E> FlatMap<'a> for Result<A, E> {
             Err(e) => Err(e),
         }
     }
+
+    fn tailrec<U>(a: U, f: impl Fn(U) -> Self::FunctorF<Result<Self::Domain, U>>) -> Self {
+        match f(a) {
+            Err(e) => Err(e),
+            Ok(Err(b1)) => Result::tailrec(b1, f),
+            Ok(Ok(v)) => Ok(v),
+        }
+    }
 }
