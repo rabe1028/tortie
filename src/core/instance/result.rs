@@ -5,16 +5,14 @@ use crate::core::{
 
 impl<'a, A, E> Invariant<'a> for Result<A, E> {
     type Domain = A;
-    type InvariantF<B>
-    where
-        B: 'a,
-    = Result<B, E>;
+    type InvariantF<B: 'a, F: Fn(Self::Domain) -> B + 'a, G: Fn(B) -> Self::Domain + 'a> =
+        Result<B, E>;
 
-    fn imap<B: 'a>(
+    fn imap<B: 'a, F: Fn(Self::Domain) -> B + 'a, G: Fn(B) -> Self::Domain + 'a>(
         self,
-        f: impl Fn(Self::Domain) -> B,
-        _: impl Fn(B) -> Self::Domain,
-    ) -> Self::InvariantF<B> {
+        f: F,
+        g: G,
+    ) -> Self::InvariantF<B, F, G> {
         self.map(f)
     }
 }
@@ -51,7 +49,9 @@ where
 }
 
 impl<'a, A, E> InvariantMonoidal<'a> for Result<A, E> {
-    fn unit() -> Self::InvariantF<()> {
+    type Unit = Result<(), E>;
+    fn unit(
+    ) -> Self::Unit {
         Ok(())
     }
 }

@@ -134,6 +134,46 @@ where
     }
 }
 
+pub struct ComposedCombine<Base, F, G, A>
+where
+    Base: Combinable,
+    F: Fn(Base::Domain) -> A,
+    G: Fn(A) -> Base::Domain,
+{
+    pub base: Base,
+    pub f: F,
+    pub g: G,
+    _dom: PhantomData<A>,
+}
+
+impl<Base, F, G, A> ComposedCombine<Base, F, G, A>
+where
+    Base: Combinable,
+    F: Fn(Base::Domain) -> A,
+    G: Fn(A) -> Base::Domain,
+{
+    pub fn new(base: Base, f: F, g: G) -> Self {
+        Self {
+            base,
+            f,
+            g,
+            _dom: PhantomData,
+        }
+    }
+}
+
+impl<Base, F, G, A> Combinable for ComposedCombine<Base, F, G, A>
+where
+    Base: Combinable,
+    F: Fn(Base::Domain) -> A,
+    G: Fn(A) -> Base::Domain,
+{
+    type Domain = A;
+    fn combine(&self, x: Self::Domain, y: Self::Domain) -> Self::Domain {
+        (self.f)(self.base.combine((self.g)(x), (self.g)(y)))
+    }
+}
+
 pub mod semigroup2 {
     use super::*;
 

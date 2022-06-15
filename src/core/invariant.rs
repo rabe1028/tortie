@@ -1,16 +1,17 @@
 pub trait Invariant<'a> {
     type Domain;
-    type InvariantF<A>: Invariant<'a, Domain = A>
-    where
-        A: 'a;
+    type InvariantF<A: 'a, F: Fn(Self::Domain) -> A + 'a, G: Fn(A) -> Self::Domain + 'a>: Invariant<
+        'a,
+        Domain = A,
+    >;
 
     /// Transform an `F<A>` into an `F<B>` by providing a transformation from
     /// `A` to `B` and one from `B` to `A`
-    fn imap<B: 'a>(
+    fn imap<B: 'a, F: Fn(Self::Domain) -> B + 'a, G: Fn(B) -> Self::Domain + 'a>(
         self,
-        f: impl Fn(Self::Domain) -> B + 'a,
-        g: impl Fn(B) -> Self::Domain + 'a,
-    ) -> Self::InvariantF<B>;
+        f: F,
+        g: G,
+    ) -> Self::InvariantF<B, F, G>;
 }
 
 #[cfg(test)]
@@ -24,7 +25,7 @@ mod tests {
     fn option_test() {
         let s = Some(1u32);
         assert_eq!(
-            Option::imap::<u64>(s, |x: u32| { x as u64 }, |_: u64| unimplemented!()),
+            Option::imap(s, |x: u32| { x as u64 }, |_: u64| unimplemented!()),
             Some(1u64)
         );
     }
