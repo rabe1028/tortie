@@ -18,11 +18,12 @@ pub trait Monad<'a>: FlatMap<'a> + Applicative<'a> {
     fn iterate_while(self, p: impl Fn(&Self::Domain) -> bool) -> Self
     where
         Self: Clone,
-        Self::FunctorF<Self::Domain>: Isomorphism<Self>,
-        Self::FunctorF<Result<Self::Domain, Self::Domain>>: Applicative<'a>,
+        Self::Rebind<Self::Domain>: Isomorphism<Self>,
+        Self::Rebind<Result<Self::Domain, Self::Domain>>: Applicative<'a>,
     {
+        let fa = self.clone();
         self.clone()
-            .flat_map(|i| Self::iterate_while_m(i, move |_| self.clone(), p).into())
+            .flat_map(|i| Self::iterate_while_m(i, |_| fa.clone(), &p).into())
             .into()
     }
 
@@ -33,11 +34,12 @@ pub trait Monad<'a>: FlatMap<'a> + Applicative<'a> {
     fn iterate_until(self, p: impl Fn(&Self::Domain) -> bool) -> Self
     where
         Self: Clone,
-        Self::FunctorF<Self::Domain>: Isomorphism<Self>,
-        Self::FunctorF<Result<Self::Domain, Self::Domain>>: Applicative<'a>,
+        Self::Rebind<Self::Domain>: Isomorphism<Self>,
+        Self::Rebind<Result<Self::Domain, Self::Domain>>: Applicative<'a>,
     {
+        let fa = self.clone();
         self.clone()
-            .flat_map(|i| Self::iterate_until_m(i, move |_| self.clone(), p).into())
+            .flat_map(|i| Self::iterate_until_m(i, |_| fa.clone(), &p).into())
             .into()
     }
 
@@ -51,7 +53,7 @@ pub trait Monad<'a>: FlatMap<'a> + Applicative<'a> {
         p: impl Fn(&Self::Domain) -> bool,
     ) -> Self
     where
-        Self::FunctorF<Result<Self::Domain, Self::Domain>>: Applicative<'a>,
+        Self::Rebind<Result<Self::Domain, Self::Domain>>: Applicative<'a>,
     {
         Self::tailrec(init, |a| {
             if p(&a) {
@@ -73,7 +75,7 @@ pub trait Monad<'a>: FlatMap<'a> + Applicative<'a> {
         p: impl Fn(&Self::Domain) -> bool,
     ) -> Self
     where
-        Self::FunctorF<Result<Self::Domain, Self::Domain>>: Applicative<'a>,
+        Self::Rebind<Result<Self::Domain, Self::Domain>>: Applicative<'a>,
     {
         Monad::iterate_while_m(init, f, |a| !p(a))
     }
@@ -88,6 +90,24 @@ mod tests {
     #[test]
     fn option_iterate_while() {
         assert_eq!(Some(1).iterate_while(|_| false), Some(1))
+    }
+
+    #[test]
+    fn standard_types_are_monads() {
+        fn assert_monad<'a, M: Monad<'a>>() {}
+
+        assert_monad::<Option<u32>>();
+        assert_monad::<Result<u32, &'static str>>();
+        assert_monad::<Box<u32>>();
+        assert_monad::<Vec<u32>>();
+    }
+
+    #[test]
+    fn vector_flat_map_is_monadic_bind() {
+        assert_eq!(
+            vec![1u32, 2].flat_map(|x| vec![x, x * 10]),
+            vec![1, 10, 2, 20]
+        );
     }
 
     // これは時間かかるので実行しない

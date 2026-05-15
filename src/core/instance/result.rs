@@ -3,35 +3,34 @@ use crate::core::{
     invariant_monoidal::InvariantMonoidal, semigroupal::Semigroupal,
 };
 
-impl<'a, A, E> Invariant<'a> for Result<A, E> {
+impl<'a, A: 'a, E: 'a> Invariant<'a> for Result<A, E> {
     type Domain = A;
-    type InvariantF<B>
+    type Rebind<B>
+        = Result<B, E>
     where
-        B: 'a,
-    = Result<B, E>;
+        B: 'a;
 
     fn imap<B: 'a>(
         self,
         f: impl Fn(Self::Domain) -> B,
         _: impl Fn(B) -> Self::Domain,
-    ) -> Self::InvariantF<B> {
+    ) -> Self::Rebind<B> {
+        self.map(|a| f(a))
+    }
+}
+
+impl<'a, A: 'a, E: 'a> Functor<'a> for Result<A, E> {
+    fn map<B: 'a>(self, f: impl FnMut(Self::Domain) -> B) -> Self::Rebind<B> {
         self.map(f)
     }
 }
 
-impl<A, E> Functor<'_> for Result<A, E> {
-    type FunctorF<B> = Result<B, E>;
-
-    fn map<B>(self, f: impl FnOnce(Self::Domain) -> B) -> Self::FunctorF<B> {
-        self.map(f)
-    }
-}
-
-impl<A, E> Semigroupal for Result<A, E> {
-    type From = A;
-    type SemigroupalF<B> = Result<B, E>;
-
-    fn product<B>(self, other: Self::SemigroupalF<B>) -> Self::SemigroupalF<(Self::From, B)> {
+impl<'a, A: 'a, E: 'a> Semigroupal<'a> for Result<A, E> {
+    fn product<B: 'a>(self, other: Self::Rebind<B>) -> Self::Rebind<(Self::Domain, B)>
+    where
+        Self::Domain: Clone,
+        B: Clone,
+    {
         match (self, other) {
             (Ok(a), Ok(b)) => Ok((a, b)),
             (Ok(_), Err(e)) => Err(e),
@@ -40,37 +39,45 @@ impl<A, E> Semigroupal for Result<A, E> {
     }
 }
 
-impl<'a, F, A, B, E> Apply<'a, A, B> for Result<F, E>
+impl<'a, F, E> Apply<'a> for Result<F, E>
 where
-    F: FnOnce(A) -> B,
+    F: 'a,
+    E: 'a,
 {
-    type ApplyF<D> = Result<D, E>;
-    fn ap(self, fa: Self::ApplyF<A>) -> Self::ApplyF<B> {
+    fn ap<A: 'a + Clone, B: 'a>(self, fa: Self::Rebind<A>) -> Self::Rebind<B>
+    where
+        Self::Domain: FnMut(A) -> B,
+        Self::Rebind<A>: Functor<'a>,
+        Self::Rebind<B>: Functor<'a>,
+    {
         self.map(|f: F| fa.map(f)).flatten()
     }
 }
 
-impl<'a, A, E> InvariantMonoidal<'a> for Result<A, E> {
-    fn unit() -> Self::InvariantF<()> {
+impl<'a, A: 'a, E: 'a> InvariantMonoidal<'a> for Result<A, E> {
+    fn unit() -> Self::Rebind<()> {
         Ok(())
     }
 }
 
-impl<'a, A, E> Applicative<'a> for Result<A, E> {
+impl<'a, A: 'a, E: 'a> Applicative<'a> for Result<A, E> {
     fn pure(x: Self::Domain) -> Self {
         Ok(x)
     }
 }
 
-impl<'a, A, E> FlatMap<'a> for Result<A, E> {
-    fn flat_map<B>(self, f: impl FnOnce(Self::Domain) -> Self::FunctorF<B>) -> Self::FunctorF<B> {
+impl<'a, A: 'a, E: 'a> FlatMap<'a> for Result<A, E> {
+    fn flat_map<B: 'a>(
+        self,
+        mut f: impl FnMut(Self::Domain) -> Self::Rebind<B>,
+    ) -> Self::Rebind<B> {
         match self {
             Ok(x) => f(x),
             Err(e) => Err(e),
         }
     }
 
-    fn tailrec<U>(a: U, f: impl Fn(U) -> Self::FunctorF<Result<Self::Domain, U>>) -> Self {
+    fn tailrec<U: 'a>(a: U, mut f: impl FnMut(U) -> Self::Rebind<Result<Self::Domain, U>>) -> Self {
         // this code happend stack overflow.
         // match f(a) {
         //     Err(e) => Err(e),

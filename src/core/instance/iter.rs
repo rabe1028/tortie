@@ -2,31 +2,29 @@ use crate::core::invariant::Invariant;
 
 use std::{marker::PhantomData, slice::Iter};
 
-
 impl<'a, A> Invariant<'a> for Iter<'a, A>
 where
     A: 'a,
     <Self as Iterator>::Item: 'a,
 {
     type Domain = <Self as Iterator>::Item;
-    type InvariantF<B>
+    type Rebind<B>
+        = IMap<Self, Box<dyn Fn(Self::Domain) -> B + 'a>, Box<dyn Fn(B) -> Self::Domain + 'a>, B>
     where
-        Self::InvariantF<B>: Invariant<'a, Domain = B>,
-        B: 'a,
-    = IMap<Self, Box<dyn Fn(Self::Domain) -> B + 'a>, Box<dyn Fn(B) -> Self::Domain + 'a>, B>;
+        B: 'a;
 
     fn imap<B: 'a>(
         self,
         f: impl Fn(Self::Domain) -> B + 'a,
         g: impl Fn(B) -> Self::Domain + 'a,
-    ) -> Self::InvariantF<B> {
+    ) -> Self::Rebind<B> {
         let f = Box::new(f);
         let g = Box::new(g);
 
         IMap {
             iter: self,
             f,
-            g,
+            _g: g,
             _phantom: PhantomData,
         }
     }
@@ -40,7 +38,7 @@ where
 {
     pub(crate) iter: I,
     f: F,
-    g: G,
+    _g: G,
     _phantom: PhantomData<A>,
 }
 
@@ -51,23 +49,23 @@ where
     F: Fn(I::Item) -> A + 'a,
     G: Fn(A) -> I::Item + 'a,
 {
-    type Domain = F::Output;
-    type InvariantF<B>
+    type Domain = A;
+    type Rebind<B>
+        = IMap<Self, Box<dyn Fn(Self::Domain) -> B + 'a>, Box<dyn Fn(B) -> Self::Domain + 'a>, B>
     where
-        B: 'a,
-    = IMap<Self, Box<dyn Fn(Self::Domain) -> B + 'a>, Box<dyn Fn(B) -> Self::Domain + 'a>, B>;
+        B: 'a;
 
     fn imap<B: 'a>(
         self,
         f: impl Fn(Self::Domain) -> B + 'a,
         g: impl Fn(B) -> Self::Domain + 'a,
-    ) -> Self::InvariantF<B> {
+    ) -> Self::Rebind<B> {
         let f = Box::new(f);
         let g = Box::new(g);
         IMap {
             iter: self,
             f,
-            g,
+            _g: g,
             _phantom: PhantomData,
         }
     }

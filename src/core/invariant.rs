@@ -1,6 +1,6 @@
 pub trait Invariant<'a> {
-    type Domain;
-    type InvariantF<A>: Invariant<'a, Domain = A>
+    type Domain: 'a;
+    type Rebind<A>: Invariant<'a, Domain = A>
     where
         A: 'a;
 
@@ -10,14 +10,14 @@ pub trait Invariant<'a> {
         self,
         f: impl Fn(Self::Domain) -> B + 'a,
         g: impl Fn(B) -> Self::Domain + 'a,
-    ) -> Self::InvariantF<B>;
+    ) -> Self::Rebind<B>;
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::kernel::semigroup::*;
-    use chrono::{NaiveDateTime, TimeZone};
+    use chrono::{DateTime, NaiveDateTime, TimeZone, Timelike};
     use chrono_tz::*;
 
     #[test]
@@ -36,12 +36,14 @@ mod tests {
         fn i64_to_datetime(secs: i64) -> NaiveDateTime {
             // from unixtimestamp[ms] to datetime
             let (secs, millis) = (secs / 1000, secs % 1000);
-            NaiveDateTime::from_timestamp(secs, millis as u32 * 1_000_000) // millis -> nanos
+            DateTime::from_timestamp(secs, millis as u32 * 1_000_000)
+                .unwrap()
+                .naive_utc()
         }
 
         fn datetime_to_i64(ndt: NaiveDateTime) -> i64 {
             // from datetime to unixtimestamp[ms]
-            ndt.timestamp_millis()
+            ndt.and_utc().timestamp_millis()
         }
 
         let sg = Semigroup::new(StaticCombine::<i64>::default());
@@ -55,7 +57,11 @@ mod tests {
         let actual = sg.combine(today, time_left);
         assert_eq!(i64_to_datetime(today_ns + left_ns), actual);
 
-        let expect = EST.ymd(2015, 12, 24).and_hms_milli(15, 40, 02, 997);
+        let expect = EST
+            .with_ymd_and_hms(2015, 12, 24, 15, 40, 02)
+            .unwrap()
+            .with_nanosecond(997_000_000)
+            .unwrap();
         assert_eq!(expect.timestamp_millis(), today_ns + left_ns)
     }
 }

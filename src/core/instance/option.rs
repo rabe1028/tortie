@@ -3,70 +3,76 @@ use crate::core::{
     invariant_monoidal::InvariantMonoidal, semigroupal::Semigroupal,
 };
 
-impl<'a, A> Invariant<'a> for Option<A> {
+impl<'a, A: 'a> Invariant<'a> for Option<A> {
     type Domain = A;
-    type InvariantF<B>
+    type Rebind<B>
+        = Option<B>
     where
-        B: 'a,
-    = Option<B>;
+        B: 'a;
 
     fn imap<B: 'a>(
         self,
         f: impl Fn(Self::Domain) -> B,
         _: impl Fn(B) -> Self::Domain,
-    ) -> Self::InvariantF<B> {
+    ) -> Self::Rebind<B> {
+        self.map(|a| f(a))
+    }
+}
+
+impl<'a, A: 'a> Functor<'a> for Option<A> {
+    fn map<B: 'a>(self, f: impl FnMut(Self::Domain) -> B) -> Self::Rebind<B> {
         self.map(f)
     }
 }
 
-impl<A> Functor<'_> for Option<A> {
-    type FunctorF<B> = Option<B>;
-
-    fn map<B>(self, f: impl FnOnce(Self::Domain) -> B) -> Self::FunctorF<B> {
-        self.map(f)
-    }
-}
-
-impl<A> Semigroupal for Option<A> {
-    type From = A;
-    type SemigroupalF<B> = Option<B>;
-
-    fn product<B>(self, other: Self::SemigroupalF<B>) -> Self::SemigroupalF<(Self::From, B)> {
+impl<'a, A: 'a> Semigroupal<'a> for Option<A> {
+    fn product<B: 'a>(self, other: Self::Rebind<B>) -> Self::Rebind<(Self::Domain, B)>
+    where
+        Self::Domain: Clone,
+        B: Clone,
+    {
         self.zip(other)
     }
 }
 
-impl<'a, F, A, B> Apply<'a, A, B> for Option<F>
+impl<'a, F> Apply<'a> for Option<F>
 where
-    F: FnOnce(A) -> B,
+    F: 'a,
 {
-    type ApplyF<D> = Option<D>;
-    fn ap(self, fa: Self::ApplyF<A>) -> Self::ApplyF<B> {
+    fn ap<A: 'a + Clone, B: 'a>(self, fa: Self::Rebind<A>) -> Self::Rebind<B>
+    where
+        Self::Domain: FnMut(A) -> B,
+        Self::Rebind<A>: Functor<'a>,
+        Self::Rebind<B>: Functor<'a>,
+    {
         self.map(|f: F| fa.map(f)).flatten()
     }
 }
 
-impl<'a, A> InvariantMonoidal<'a> for Option<A> {
-    fn unit() -> Self::InvariantF<()> {
+impl<'a, A: 'a> InvariantMonoidal<'a> for Option<A> {
+    fn unit() -> Self::Rebind<()> {
         Some(())
     }
 }
 
-impl<'a, A> Applicative<'a> for Option<A> {
+impl<'a, A: 'a> Applicative<'a> for Option<A> {
     fn pure(x: Self::Domain) -> Self {
         Some(x)
     }
 }
 
-impl<'a, A> FlatMap<'a> for Option<A> {
-    fn flat_map<B>(self, f: impl FnOnce(Self::Domain) -> Self::FunctorF<B>) -> Self::FunctorF<B> {
+impl<'a, A: 'a> FlatMap<'a> for Option<A> {
+    fn flat_map<B: 'a>(
+        self,
+        mut f: impl FnMut(Self::Domain) -> Self::Rebind<B>,
+    ) -> Self::Rebind<B> {
         match self {
             Some(x) => f(x),
             None => None,
         }
     }
 
-    fn tailrec<U>(a: U, f: impl Fn(U) -> Self::FunctorF<Result<Self::Domain, U>>) -> Self {
+    fn tailrec<U: 'a>(a: U, mut f: impl FnMut(U) -> Self::Rebind<Result<Self::Domain, U>>) -> Self {
         // this code happend stack overflow.
         // match f(a) {
         //     None => None,

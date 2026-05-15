@@ -7,12 +7,12 @@ use super::{invariant::Invariant, invariant_semigroupal::InvariantSemigroupal};
  */
 
 pub trait InvariantMonoidal<'a>: InvariantSemigroupal<'a> {
-    fn point<A: 'a + Clone>(a: A) -> <Self::InvariantF<()> as Invariant<'a>>::InvariantF<A>
+    fn point<A: 'a + Clone>(a: A) -> <Self::Rebind<()> as Invariant<'a>>::Rebind<A>
     where
-        <Self as Invariant<'a>>::InvariantF<()>: Invariant<'a, Domain = ()>,
+        <Self as Invariant<'a>>::Rebind<()>: Invariant<'a, Domain = ()>,
     {
         <Self as InvariantMonoidal<'a>>::unit().imap(move |_| a.clone(), |_| ())
     }
 
-    fn unit() -> Self::InvariantF<()>;
+    fn unit() -> Self::Rebind<()>;
 }

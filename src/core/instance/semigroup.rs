@@ -8,17 +8,17 @@ where
     A: 'a,
 {
     type Domain = A;
-    type InvariantF<B>
+    type Rebind<B>
+        = Semigroup<CombineFn<Box<dyn Fn(B, B) -> B + 'a>, B>, B, Normal>
     where
-        B: 'a,
-    = Semigroup<CombineFn<Box<dyn Fn(B, B) -> B + 'a>, B>, B, Normal>;
-    // type InvariantF<B> = Semigroup<CombineFn<impl Fn(B, B) -> B + 'a, B>, B, Normal>;
+        B: 'a;
+    // type Rebind<B> = Semigroup<CombineFn<impl Fn(B, B) -> B + 'a, B>, B, Normal>;
 
     fn imap<B: 'a>(
         self,
         f: impl Fn(Self::Domain) -> B + 'a,
         g: impl Fn(B) -> Self::Domain + 'a,
-    ) -> Self::InvariantF<B> {
+    ) -> Self::Rebind<B> {
         let ops: Box<dyn Fn(B, B) -> B + '_> = Box::new(move |x, y| f(self.combine(g(x), g(y))));
         let ops = CombineFn::new(ops);
 

@@ -17,24 +17,26 @@ use super::{apply::AppliedBound, functor::Functor, Isomorphism};
  */
 
 pub trait FlatMap<'a>: AppliedBound<'a> {
-    fn flat_map<B>(self, f: impl FnOnce(Self::Domain) -> Self::FunctorF<B>) -> Self::FunctorF<B>;
+    fn flat_map<B: 'a>(self, f: impl FnMut(Self::Domain) -> Self::Rebind<B>) -> Self::Rebind<B>;
 
-    fn flatten(self) -> Self::FunctorF<Self::Domain>
+    fn flatten(self) -> Self::Rebind<Self::Domain>
     where
-        Self::Domain: FlatMap<'a> + Functor<'a, FunctorF<Self::Domain> = Self::Domain>,
-        Self::FunctorF<Self::Domain>: Isomorphism<Self::Domain>,
+        Self::Domain: FlatMap<'a> + Functor<'a, Rebind<Self::Domain> = Self::Domain>,
+        Self::Rebind<Self::Domain>: Isomorphism<Self::Domain>,
     {
         self.flat_map(|fa| fa.into())
     }
 
-    fn flat_tap<B>(self, f: impl FnOnce(Self::Domain) -> Self::FunctorF<B>) -> Self
+    fn flat_tap<B: 'a>(
+        self,
+        mut f: impl FnMut(Self::Domain) -> Self::Rebind<B>,
+    ) -> Self::Rebind<Self::Domain>
     where
-        Self::FunctorF<Self::Domain>: Isomorphism<Self>
-            + Isomorphism<<Self::FunctorF<B> as Functor<'a>>::FunctorF<Self::Domain>>,
+        Self::Rebind<B>: Functor<'a, Rebind<Self::Domain> = Self::Rebind<Self::Domain>>,
+        Self::Rebind<Self::Domain>: Functor<'a>,
         Self::Domain: Clone,
-        Self: From<Self::FunctorF<Self::Domain>>,
     {
-        self.flat_map(|a| f(a.clone()).replace(a).into()).into()
+        self.flat_map(|a| f(a.clone()).replace(a))
     }
 
     /**
@@ -46,7 +48,7 @@ pub trait FlatMap<'a>: AppliedBound<'a> {
      * Implementations of this method should use constant stack space relative to `f`.
      */
     const TAILREC_LIMIT: usize = 1_000_000_000;
-    fn tailrec<U>(a: U, f: impl Fn(U) -> Self::FunctorF<Result<Self::Domain, U>>) -> Self;
+    fn tailrec<U: 'a>(a: U, f: impl FnMut(U) -> Self::Rebind<Result<Self::Domain, U>>) -> Self;
 }
 
 #[cfg(test)]
@@ -56,6 +58,43 @@ mod tests {
     #[test]
     fn option_flat_map() {
         assert_eq!(Some(1).flat_map(|_| Some(2)), Some(2))
+    }
+
+    #[test]
+    fn result_flat_map() {
+        let value: Result<u32, &str> = Ok(1);
+        assert_eq!(value.flat_map(|x| Ok(x + 1)), Ok(2));
+
+        let value: Result<u32, &str> = Err("error");
+        assert_eq!(value.flat_map(|x| Ok(x + 1)), Err("error"));
+    }
+
+    #[test]
+    fn box_flat_map() {
+        assert_eq!(*Box::new(1u32).flat_map(|x| Box::new(x + 1)), 2);
+    }
+
+    #[test]
+    fn vector_flat_map() {
+        let value = vec![1, 2, 3];
+        assert_eq!(
+            value.flat_map(|x| vec![x, x * 10]),
+            vec![1, 10, 2, 20, 3, 30]
+        );
+    }
+
+    #[test]
+    fn vector_tailrec() {
+        assert_eq!(
+            Vec::tailrec(0, |x| {
+                if x < 3 {
+                    vec![Err(x + 1)]
+                } else {
+                    vec![Ok(x)]
+                }
+            }),
+            vec![3]
+        );
     }
 
     #[test]

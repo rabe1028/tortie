@@ -5,6 +5,6 @@ use super::{invariant::Invariant, semigroupal::Semigroupal};
  * and Semigroupal. It comes up enough to be useful, and composes well
  */
 
-pub trait InvariantSemigroupal<'a>: Semigroupal + Invariant<'a> {}
+pub trait InvariantSemigroupal<'a>: Semigroupal<'a> + Invariant<'a> {}
 
-impl<'a, A> InvariantSemigroupal<'a> for A where A: Semigroupal + Invariant<'a> {}
+impl<'a, A> InvariantSemigroupal<'a> for A where A: Semigroupal<'a> + Invariant<'a> {}
